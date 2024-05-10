@@ -38,6 +38,8 @@ func TestAccRolesAnywhereProfile_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "role_arns.#", "1"),
 					acctest.CheckResourceAttrGlobalARN(resourceName, "role_arns.0", "iam", fmt.Sprintf("role/%s", roleName)),
 					resource.TestCheckResourceAttr(resourceName, "duration_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "certificate_attribute_mapping.0.certificate_field", "CommonName"),
+       				resource.TestCheckResourceAttr(resourceName, "certificate_attribute_mapping.0.mapping_rule", "exists"),
 				),
 			},
 			{
@@ -241,6 +243,10 @@ func testAccProfileConfig_basic(rName, roleName string) string {
 resource "aws_rolesanywhere_profile" "test" {
   name      = %[1]q
   role_arns = [aws_iam_role.test.arn]
+  certificate_attribute_mapping {
+	certificate_field = "CommonName"
+	mapping_rule      = "exists"
+	}
 }
 `, rName))
 }

@@ -72,6 +72,22 @@ func ResourceProfile() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"certificate_attribute_mapping": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"certificate_field": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"mapping_rule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 			names.AttrTags:    tftags.TagsSchema(),
 			names.AttrTagsAll: tftags.TagsSchemaComputed(),
 		},
@@ -108,6 +124,18 @@ func resourceProfileCreate(ctx context.Context, d *schema.ResourceData, meta int
 	if v, ok := d.GetOk("session_policy"); ok {
 		input.SessionPolicy = aws.String(v.(string))
 	}
+
+	if v, ok := d.GetOk("certificate_attribute_mapping"); ok {
+		mappings := v.([]interface{})
+		for _, mapping := range mappings {
+			mapDef := mapping.(map[string]interface{})
+			input.CertificateAttributeMapping = append(input.CertificateAttributeMapping, types.CertificateAttributeMapping{
+				CertificateField: aws.String(mapDef["certificate_field"].(string)),
+				MappingRule:      aws.String(mapDef["mapping_rule"].(string)),
+			})
+		}
+	}
+	
 
 	log.Printf("[DEBUG] Creating RolesAnywhere Profile: %#v", input)
 	output, err := conn.CreateProfile(ctx, input)
@@ -197,6 +225,20 @@ func resourceProfileUpdate(ctx context.Context, d *schema.ResourceData, meta int
 			}
 		}
 	}
+
+	if d.HasChange("certificate_attribute_mapping") {
+		_, n := d.GetChange("certificate_attribute_mapping")
+		newMappings := n.([]interface{})
+		input.CertificateAttributeMapping = make([]types.CertificateAttributeMapping, 0, len(newMappings))
+		for _, mapping := range newMappings {
+			mapDef := mapping.(map[string]interface{})
+			input.CertificateAttributeMapping = append(input.CertificateAttributeMapping, types.CertificateAttributeMapping{
+				CertificateField: aws.String(mapDef["certificate_field"].(string)),
+				MappingRule:      aws.String(mapDef["mapping_rule"].(string)),
+			})
+		}
+	}
+	
 
 	return resourceProfileRead(ctx, d, meta)
 }
